@@ -1,0 +1,49 @@
+
+--Estructura: 
+
+Perfileria de aluminio:
+
+Barra X-2uds-30x950mm
+Barra X1-4uds-30x460mm
+Barra Y-4uds-30x500mm
+Barra Y1-4uds-30x150mm
+Barra Z-3uds-30x1010mm
+
+Tapas barras-4uds-30mmx30mm
+
+Codo 90º (2bocas)-4uds-30mm
+T 180º (3bocas)-2uds-30mm
+T doble 90º (4bocas)-4uds-30mm
+
+Refuerzos planchas madera-3uds-200x1010x8mm
+
+Tornilleria: 12uds-M5x40mm
+Palometas: 12uds-M5
+
+
+--Riego:
+
+
+Bandeja: 1ud-
+1000x1000-110mm
+Macetas: 9uds-200x200x250mm
+Bandeja perforada maceta: 9uds-220x220x40mm
+Deposito: 800x800x400mm
+codo 90º: Tubo 16mm
+Tubo silicona: 16mmx1500mm
+Octopus (repartidor) 9 salidas
+Pinza Octopus: 1ud
+Micro tubo riego: 8x6000mmm
+
+
+
+
+Electronica:
+
+Sensor mecánico de nivel-2uds
+Arduino
+Caja arduino
+Bomba agua sumergible 12v
+Pinza abrazadera bomba
+
+
