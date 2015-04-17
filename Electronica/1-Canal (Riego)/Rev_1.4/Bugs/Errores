@@ -1,0 +1,71 @@
+Bugs/Errores detectados:
+
+
+-------------------------------------------------------------------------------
+* Mejorar el comportamiento de los botones. (Lineas 311-440 del archivo https://github.com/Artesanos/SAC-Sistemas-Automatas-de-Cultivo/blob/master/Electronica/1-Canal%20(Riego)/Rev_1.4/Codigo/Rev_1.4.1/SAC_1S_1_4_1/SAC_1S_1_4_1.ino)
+
+Los botones deben tener el siguiente comportamiento:
+
+Los botones + y - (pulsaciones cortas) sirven para navegar por los menús si se está en modo selección, y en modo edición sirven para modificar los parámetros.
+
+El botón central (pulsación corta), sirve para entrar en modo selección, y una vez en modo selección si se vuelve a pulsar (pulsación corta) entra en modo edición. Con una pulsación larga (>3"), entra en modo configuración (Idioma, Hora, etc.)
+
+!  Actualmente en modo selección, los botones (+ y -) están invertidos, aunque en modo edición el comportamiento es correcto (+ suma o - resta valor al parámetro). Otro problema es de que la respuesta al pulsarlos es muy lenta, se hace muy tedioso el modificar los parámetros.
+
+¿? Igual interesa sacar en una librería aparte el código de los botones, al igual que los otros periféricos ya están. Incluso puede resultar práctico más adelante de cara al control telemático del módulo. He buscado alguna librería sobre botones que igual puede usarse.
+
+
+https://community.spark.io/t/clickbutton-library/2658
+https://code.google.com/p/clickbutton/
+
+
+-------------------------------------------------------------------------------
+* Corregir el comportamiento en el proceso de riego (gradientes humedad y secado). (Lineas 1238-1318 del archivo https://github.com/Artesanos/SAC-Sistemas-Automatas-de-Cultivo/blob/master/Electronica/1-Canal%20(Riego)/Rev_1.4/Codigo/Rev_1.4.1/SAC_1S_1_4_1/SAC_1S_1_4_1.ino)
+
+A la hora de regar, el comportamiento debe ser el siguiente: una vez la humedad del suelo baja del mínimo, se inicia el riego hasta que se alcanza el óptimo, una vez alcanzado el óptimo el riego se detiene, hasta que de  nuevo baje del mínimo. Si cuando se arranca el modulo la humedad está entre el mínimo y el óptimo, el modulo no riega, solo se desencadena el riego, al bajar del mínimo. Con esto se consiguen gradientes de humedad y secado.
+
+Además hay otros condicionantes que detienen el riego, o directamente no se inicia, si estos se cumplen:
+
+* No hay agua (Water Level Tank).
+
+* Se ha alcanzado la capacidad de campo (Field Capacity). Se trata de otro sensor exactamente igual que el de la humedad del suelo, solo que se coloca justo debajo de las raices. Si FC Sensor>=MOISTURE_CALIB entonces se para el riego.
+ ! Revisar moisture_MAX, puesto que debe ser el mismo valor que MOISTURE_CALIB (Archivo SACsensors.h)
+* La Temperatura del suelo esta por encima de la temperatura máxima seleccionada (¿?opcionalmente también, si la temperatura del suelo esta por debajo de la temperatura mínima seleccionada, creo que a nivel agronómico no tiene mucha relevancia este condicionante, aunque se puede añadir ya por si acaso).
+
+
+-------------------------------------------------------------------------------
+* Corregir los ciclos de riego (Lineas 1321-1333 del archivo https://github.com/Artesanos/SAC-Sistemas-Automatas-de-Cultivo/blob/master/Electronica/1-Canal%20(Riego)/Rev_1.4/Codigo/Rev_1.4.1/SAC_1S_1_4_1/SAC_1S_1_4_1.ino)
+
+Los ciclos de riego se diseñaron para permitir que cuando el sistema deba regar, lo pueda hacer a intervalos, y así conseguir que la tierra se vaya humedeciendo poco a poco. Decir que se trata de ciclos repetitivos, hasta que se alcanza la humedad óptima.
+
+Los ciclos de riego constan de 2 parámetros:
+
+- Total de la duración del ciclo de riego en segundos (max 600"), incluye el tiempo que esta regando + el tiempo de espera.
+- Porcentaje del total del ciclo que está regando (% ON).
+
+
+Ejemplos:
+
+Total duración=10"
+% ON=50%
+Regaría 5 ", espera 5 ", y repite el ciclo hasta alcanzar la humedad óptima.
+
+****************
+
+Total duración=10"
+% ON=10%
+Regaría 1 ", espera 9 ", y repite el ciclo hasta alcanzar la humedad óptima.
+
+****************
+
+Total duración=10"
+% ON=90%
+Regaría 9 ", espera 1 ", y repite el ciclo hasta alcanzar la humedad óptima.
+
+****************
+
+
+-------------------------------------------------------------------------------
+* Corregir el modo de medición (continua o a intervalos) de los sensores de humedad del suelo y capacidad de campo.
+
+Los sensores de humedad del suelo y capacidad de campo, básicamente son dos electrodos por los que circula corriente eléctrica, y en función del gradiente del conductividad se calcula la humedad. Pues bien, inicialmente observamos, que si hacíamos pasar la corriente de modo continuo, los electrodos sufrían un desgaste por corrosión muy importante, por lo que se decidió, que la corriente de los electrodos se produjera por pulsos infinitesimales (SOIL_MOISTURE_POWER_PIN); con esto conseguimos reducir el desgaste de los electrodos y la lectura en tiempo real no se veía afectada al tratarse de pulsos infinitesimales. Pues bien, resulta que cuando hemos puesto a funcionar el módulo de riego en su versión 9VDC, el consumo es alto y hace que la batería se agote demasiado pronto, por lo que habría que añadir otro parámetro que fuera la frecuencia de muestreo de éstos sensores (Continuo o a Intervalos [15', 30', 45' o 60']. De todos modos, aunque esté en modo continuo, se siguen produciendo los pulsos infinitesimales, y cuando esté a intervalos (ej. 15'), mediría 1" con sus pulsos infinitesimales, espera 15' y repite el ciclo. Esto cuando está en stand-by (dentro del rango entre el mínimo y el optimo), ya que siempre que se inicie el riego, se pone en modo continuo, es necesario tener lectura continua hasta alcanzar el óptimo y entonces vuelve a la medición por pulsos, si así estaba programado.
