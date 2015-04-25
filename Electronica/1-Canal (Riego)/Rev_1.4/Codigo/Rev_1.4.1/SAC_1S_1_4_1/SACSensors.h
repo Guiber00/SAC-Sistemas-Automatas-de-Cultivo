@@ -1,7 +1,3 @@
-
-#include <Time.h>
-#include <OneWire.h>
-
 /****************************************************************
 SACSensors: this file contains all the functions for use the sensors and use the sensor cache. 
  for the SAC Project:
@@ -32,40 +28,36 @@ SACSensors: this file contains all the functions for use the sensors and use the
  * Current Version: 0.3.
 *************************************************************************/
 
-/*
- * SOIL TEMPERATURE PIN
- */
+#include <Time.h>
+#include <OneWire.h>
 
-#define DS19S20_PIN 17
+// SOIL TEMPERATURE PIN
 
-/*
- * MOISTURE POWER PIN
- */
-#define SOIL_MOISTURE_POWER_PIN 2
+#define DS19S20_PIN 13
 
-/*
- * MOISTURE PIN
- */
-#define MOISTURE_PIN A1
+// SM POWER PIN
+ 
+#define SM_POWER_PIN 5
 
-/*
- * WATER TANK PIN
- */
-#define WTS_PIN 3
+//SM PIN
 
-/*
- * WATER FLOW PIN
- */
-#define WFL_PIN 16
+#define SM_PIN A3
 
-/*
- * FIELD CAPACITY PIN
- */
+// WATER AVAILABLE PIN (WATER LEVEL TANK OR PRESOSTATE)
+ 
+#define AWater_PIN A7
+
+// WATER FLOW PIN
+
+#define WaterFlow_PIN 16
+
+//FIELD CAPACITY PIN
+
 #define FC_PIN A0
 
 
-#define MOISTURE_SMOOTHING 85
-#define MOISTURE_CALIB 500
+#define SM_SMOOTHING 85
+#define SM_CALIB 500
 
 
 
@@ -74,81 +66,72 @@ int Calc;
 /**
 * Read the field capacity in function of the previous calibration.
 * Parameters:
-* fcapacity_calib: field capacity calibration; the maximum value where the field is saturated.
+* FC_calib: field capacity calibration; the maximum value where the field is saturated.
 * returns true if the field is saturated or false otherwise
 */
-boolean readFieldCapacity(int fcapacity_calib){
+boolean readFieldCapacity(int FC_calib){
          
-         digitalWrite(SOIL_MOISTURE_POWER_PIN, HIGH);
+         digitalWrite(SM_POWER_PIN, HIGH);
   
   int cached_fc = analogRead(FC_PIN);
-  digitalWrite(SOIL_MOISTURE_POWER_PIN, LOW);
-          int fcapacity=map(cached_fc,0,fcapacity_calib,0,100);
-   return fcapacity>=100;
+  digitalWrite(SM_POWER_PIN, LOW);
+          int FC=map(cached_fc,0,FC_calib,0,100);
+   return FC>=100;
 }
 
 void npm();
-/*
-* this struct store the last cached data sensor.
-*/
+
+// this struct store the last cached data sensor.
+
 typedef struct {
-  float cached_temperature;//Last Temperature
-  float cached_humidity;//Last Air Humidity
-  int cached_waterlevel;//Last WaterLevel
+  int cached_AWater;//Last AWater
   float cached_flowvolume; //Water Flow
-  int cached_tempmin;//Last Minimum Temperature
-  int cached_tempmax;//Last Maximum Temperature
-  int cached_moisture;//Last Soil Moisture
-  int cached_minmoisture;//Last Minimum Temperature
-  int cached_maxmoisture;//Last Maximum Temperature
+  int cached_STmin;//Last Minimum Temperature
+  int cached_STMax;//Last Maximum Temperature
+  int cached_SM;//Last Soil Moisture
+  int cached_SMmin;//Last Minimum Temperature
+  int cached_SMOp;//Last Maximum Temperature
   int cached_waterFlowdiameter;//Water Flow Diameter
   boolean cached_fieldCapacity;//last result for the field capacity
-  int cached_cicle_length;
   tmElements_t cached_lastWaterEvent;//Last Time and Date for Pumping.
-  int cached_pump_percent;
-  int cached_pump_cicle_seconds;
+  int cached_PICicle;
+  int cached_TICicle;
   
 
 } cached_sensors;
-/*
- * This Struct store all the information for the current state.
- */
+
+// This Struct store all the information for the current state.
+
 typedef struct {
 
-	/**
-	 * the moisture target
-	 */
-	float moisture_target;
-	/**
-	 * current moisture_MIN
-	 */
-	float moisture_MIN;
-	/**
-	 * current moisture_MIN
-	 */
-	float moisture_MAX;
-	/**
-	 * current moisture
-	 */
-	float current_moisture;
-	/*
-	 * Max Soil Temperature
-	 */
-	float temps_max;
-	/*
-	 * Min Soil Temperature
-	 */
-	float temps_min;
-	/*
-	 * Current Soil Temperature
-	 */
-	float current_temps;
-	/*
-	 * Current Water Consumption in m3
-	 */
+	// Soil Moisture Optimum
+	
+	float SMOp;
+	
+        //Soil Moisture minimum
+	 
+	float SMmin;
+	
+        // current Soil Moisture
+	 
+	float current_SM;
+	
+        // Max Soil Temperature
+	
+	float STMax;
+	
+        // Min Soil Temperature
+	
+	float STmin;
+	
+        //Current Soil Temperature
+	
+	float current_ST;
+	
+        //Current Water Consumption in m3
+	
 	float consumption;
-        int cicle_length_seconds;
-	boolean field_capacity;
+        boolean FC;
         
 
 }State;
@@ -163,7 +146,7 @@ enum Interval_state{
  *read the Soilt Temperature
  * returns: the Soil Temperature in Celsius.
 */ 
-float read_SoilTemp()
+float read_ST()
 {
   OneWire ds(DS19S20_PIN);  // on pin A1
   byte data[12];
@@ -210,24 +193,24 @@ float read_SoilTemp()
 }
  /*
  *
- * Read the Soil Moisture.
- * returns Soil Moisture in Percent.
+ * Read the Soil SM.
+ * returns Soil SM in PICicle.
  */
- float read_moisture(int hs_calib){
+ float read_SM(int hs_calib){
    
-  digitalWrite(SOIL_MOISTURE_POWER_PIN, HIGH);
+  digitalWrite(SM_POWER_PIN, HIGH);
   
-  float cached_moisture = analogRead(MOISTURE_PIN);
-  digitalWrite(SOIL_MOISTURE_POWER_PIN, LOW);
-  cached_moisture=  map(cached_moisture,0,hs_calib,0,99);
-  if(cached_moisture>=100)
-    cached_moisture=99;
+  float cached_SM = analogRead(SM_PIN);
+  digitalWrite(SM_POWER_PIN, LOW);
+  cached_SM=  map(cached_SM,0,hs_calib,0,99);
+  if(cached_SM>=100)
+    cached_SM=99;
    static float kept=0;
-   float soil_moisture= cached_moisture *100/ MOISTURE_CALIB;
-   kept=(kept* MOISTURE_SMOOTHING/100.0);
-   kept=kept+soil_moisture*(100-MOISTURE_SMOOTHING)/100.0;
+   float soil_SM= cached_SM *100/ SM_CALIB;
+   kept=(kept* SM_SMOOTHING/100.0);
+   kept=kept+soil_SM*(100-SM_SMOOTHING)/100.0;
    
-  return cached_moisture;
+  return cached_SM;
  }
  
  
@@ -237,20 +220,20 @@ float read_SoilTemp()
  
  /*
  *
- * Read the WaterLevel Tank
+ * Read the AWater Tank
  * return true if tank have water or false if not.
  */
- boolean getWaterLevel(){
+ boolean getAWater(){
 
-	int WaterLevel=analogRead(WTS_PIN);
-	int WaterUp=map(WaterLevel,0,602,0,1);
+	int AWater=analogRead(AWater_PIN);
+	int WaterUp=map(AWater,0,602,0,1);
 	//Note When We Want analog Water results, change map function
 	return WaterUp>0;
 }
  void setupFlowRate()
  {
    NbTopsFan=0;
-   pinMode(WFL_PIN, INPUT);
+   pinMode(WaterFlow_PIN, INPUT);
    attachInterrupt(0,npm,RISING);
  }
  
@@ -281,16 +264,16 @@ float getWaterFlowRate ()
  * fcCapacityCalib: field Capacity calibration.
  */
 
-void update_State(cached_sensors & last_values,tmElements_t current_event,int FCapacityCalib,byte mode,long lastInterval, boolean& cerrojo_intervalo, long& IntervalTime)
+void update_State(cached_sensors & last_values,tmElements_t current_event,int FCCalib,byte mode,long lastInterval, boolean& cerrojo_intervalo, long& IntervalTime)
 {
-            float curr_moisture;
+            float curr_SM;
             
             if( mode==I_INTERVAL){         
             long time_aux=millis();
 
             if(cerrojo_intervalo==HIGH ){
-            curr_moisture=read_moisture(FCapacityCalib);
-            last_values.cached_moisture=curr_moisture;
+            curr_SM=read_SM(FCCalib);
+            last_values.cached_SM=curr_SM;
             cerrojo_intervalo=LOW;
             IntervalTime=millis();
             }
@@ -299,21 +282,21 @@ void update_State(cached_sensors & last_values,tmElements_t current_event,int FC
             } 
             }          
             if(mode==I_CONTINOUS){
-            curr_moisture=read_moisture(FCapacityCalib);
-            last_values.cached_moisture=curr_moisture;
+            curr_SM=read_SM(FCCalib);
+            last_values.cached_SM=curr_SM;
             }
             
-	    float curr_temps= read_SoilTemp();
+	    float curr_ST= read_ST();
             
             
 	    float curr_flowrate=0.0;//getWaterFlowRate();
     
     
             
-	    last_values.cached_temperature=curr_temps;
-	    last_values.cached_waterlevel = 0.0;//getWaterLevel(); // Boolean indicates if we have water or not.
+
+	    last_values.cached_AWater = 0.0;//getAWater(); // Boolean indicates if we have water or not.
 	    last_values.cached_flowvolume+=curr_flowrate/60000;//FlowRate(L/m) to FlowRate(m3/s).
-	    last_values.cached_fieldCapacity=readFieldCapacity(FCapacityCalib);
+	    last_values.cached_fieldCapacity=readFieldCapacity(FCCalib);
 
 }
 /*
@@ -329,17 +312,16 @@ State read_sensors(cached_sensors & last_values)
 
 
 	/* set the state */
-	current_state.moisture_MAX=last_values.cached_maxmoisture;
-	current_state.moisture_MIN=last_values.cached_minmoisture;
+	current_state.SMOp=last_values.cached_SMOp;
+	current_state.SMmin=last_values.cached_SMmin;
 
-        current_state.current_moisture=last_values.cached_moisture;
+        current_state.current_SM=last_values.cached_SM;
 	current_state.consumption=last_values.cached_flowvolume;
-	current_state.current_temps=last_values.cached_temperature;
-	current_state.moisture_target=last_values.cached_maxmoisture;
-	current_state.temps_max=last_values.cached_tempmax;
-	current_state.temps_min=last_values.cached_tempmin;
-	current_state.field_capacity=last_values.cached_fieldCapacity;
-        current_state.cicle_length_seconds=last_values.cached_cicle_length*60;
+	current_state.SMOp=last_values.cached_SMOp;
+	current_state.STMax=last_values.cached_STMax;
+	current_state.STmin=last_values.cached_STmin;
+	current_state.FC=last_values.cached_fieldCapacity;
+
         
         
        
@@ -349,36 +331,32 @@ State read_sensors(cached_sensors & last_values)
 
 cached_sensors initSensorsCache(){
   cached_sensors current_sensors;
-   current_sensors.cached_moisture=0.0;
-   current_sensors.cached_temperature=0.0;
-   current_sensors.cached_waterlevel = 0.0;//getWaterLevel(); // Boolean indicates if we have water or not.
+   current_sensors.cached_SM=0.0;
+   current_sensors.cached_AWater = 0.0;//getAWater(); // Boolean indicates if we have water or not.
    current_sensors.cached_flowvolume+=0.0;//FlowRate(L/m) to FlowRate(m3/s).
    current_sensors.cached_fieldCapacity=true;
-   current_sensors.cached_humidity=0;
-   current_sensors.cached_tempmin=0;
-   current_sensors.cached_tempmax=0;
-   current_sensors.cached_minmoisture=0;
-   current_sensors.cached_maxmoisture=0;
+   current_sensors.cached_STmin=0;
+   current_sensors.cached_STMax=0;
+   current_sensors.cached_SMmin=0;
+   current_sensors.cached_SMOp=0;
    
 
    return current_sensors;
 }
-int readFCapacityValue()
+int readFCValue()
 {
-  digitalWrite(SOIL_MOISTURE_POWER_PIN, HIGH);
+  digitalWrite(SM_POWER_PIN, HIGH);
   
-  int cached_fc = analogRead(MOISTURE_PIN);
-  digitalWrite(SOIL_MOISTURE_POWER_PIN, LOW);
+  int cached_fc = analogRead(SM_PIN);
+  digitalWrite(SM_POWER_PIN, LOW);
   
   return cached_fc;
 }
 boolean state_changed(State state1,State state2)
 {
-   if(state1.current_moisture!= state2.current_moisture ) return true;
-   if(state1.current_temps!= state2.current_temps ) return true;
-   if(state1.field_capacity!= state2.field_capacity ) return true;
+   if(state1.current_SM!= state2.current_SM ) return true;
+   if(state1.current_ST!= state2.current_ST ) return true;
+   if(state1.FC!= state2.FC ) return true;
  
    return false;
 }
-
-
