@@ -1,4 +1,3 @@
-#include <EEPROM.h>
 /****************************************************************
 EEPROMUtils: this file contains all the information about the Configuration
  for the SAC Project:
@@ -29,9 +28,11 @@ EEPROMUtils: this file contains all the information about the Configuration
  in the EEPROM.
  * Current Version: 0.2.
 *************************************************************************/
-  
+ #include <EEPROM.h>
  #define CONFIG_START 25 //Initial Address in the EEPROM.
-/*Struct with the configuration */
+ 
+// Struct with the configuration
+
 typedef struct{
   int Relay;//Relay
   float SMOp; //Soil Moisture Optimum
