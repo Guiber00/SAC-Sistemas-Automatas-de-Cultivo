@@ -69,14 +69,17 @@
 #define BUTTON_UP_PIN 9
 #define BUTTON_CENTER_PIN 8
 #define BUTTON_DOWN_PIN 7
+
 #define BUTTONUP 0
 #define BUTTONDOWN 1
 #define BUTTONCENTER 2
 #define BUTTONCENTERLONG 3
-
 #define TIMEOUT 6
+
 #define IDLE -1
+
 #define TOTALTIMEOUTTIME 10000
+
 #define VERSION 1.41
 
 // DIFFERENT STATES TO MOVE THROUGH MENU
@@ -247,7 +250,7 @@ void loop(){
 
 // ALWAYS UPDATE SCREEN WHEN STATE CHANGES
 
-  update_State(current_sensorsvalues,tm,current_config.calib_FC,interval_mode, current_config.interval_time, cerrojo_intervalo, IntervalTime);
+  update_State(current_sensorsvalues,tm,current_config.SM_calib,interval_mode, current_config.interval_time, cerrojo_intervalo, IntervalTime);
   current_state=read_sensors(current_sensorsvalues);
   if(current_mstate==ESTADO){
     if(state_changed(current_state,previous_state) || time_between(lastUpdate,tm)>1){
@@ -618,7 +621,7 @@ void handleEventSelection(int event)
     if(event==BUTTONCENTER)
     {
       int calib=readFCValue();
-      current_config.calib_FC=calib;
+      current_config.SM_calib=calib;
       store_Settings(current_config);
       current_selectionstate=MENU;
       interval_mode=I_INTERVAL;
