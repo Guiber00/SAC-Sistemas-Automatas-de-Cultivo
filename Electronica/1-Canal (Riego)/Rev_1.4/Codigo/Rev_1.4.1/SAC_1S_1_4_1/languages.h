@@ -12,47 +12,21 @@ int active_language=1;
 
 
 enum {
-  S_S=0,
-  S_PU,
-  S_TIME,
-  S_SOIL_MOISTURE,
-  S_DISCONNECTED,
-  S_IRRIGATION,
-
-
+  S_SM,
   S_RETURN_TO,
-  S_MAIN_MENU,
-
-  S_RELAYS,
+  S_CONFIGURATION,
   S_RESET,
   S_ON,
-  S_START,
-  S_OFF,
-  S_DURATION,
-
   S_RANGE,
-  
-  ST_MAX,
-  CONSUMPTION,
-  CICLO,
-  S_DATE,
-  S_HOUR,
+  S_STMax,
+  S_CONSUMPTION,
+  S_CICLE,
   S_SATCALIBRATION,
-  S_SPANOL,
-  S_SAVE,
-  S_EDITDAY,
-  S_EDITHOUR,
-  S_EDITMINUTES,
   S_CURRENTVALUE,
-  S_EDITMONTH,
-  S_EDITYEAR,
   S_ABOUT,
   S_SAC,
-  S_EDITSTATE,
-  S_FC,
-  S_MIN,
-  S_HS,
-};
+  S_SMm,
+ };
 
 #define MAX_LANGUAGE 1
 typedef struct TranslatedString {
@@ -60,50 +34,24 @@ typedef struct TranslatedString {
 } TranslatedString;
 
 TranslatedString string_db[]={
-  /* for languages missing translations, english will be used instead */
+  
+  // for languages missing translations, english will be used instead 
+  
   {{"HSO:"}},
-  {{"RIEGO"}},
-  {{"HORA"}},
-  {{"HUMEDAD SUELO"}},
-  {{"APAGADO"}},
-  {{"RIEGO"}},
-
-
   {{"VOLVER"}},
-  {{"MENU PRINCIPAL"}},
-
-  {{"SALIDAS"}},
+  {{"CONFIGURACION"}},
   {{"RESET"}},
   {{"ON:"}},
-  {{"INICIO:"}},
-  {{"OFF:"}},
-  {{"DURACION"}},
-
   {{" "  }},
-
   {{"TSMAX:"}},
   {{"CONSUMO:"}},
   {{"CICLO:"}},
-  {{"FECHA"}},
-  {{"HORA"}},
   {{"CALIBRATION SAT"}},
-  {{"ESPANOL"}},
-  {{"GUARDAR"}},
-  {{"EDITAR DIA"}},
-  {{"EDITAR HORA"}},
-  {{"EDITAR MINUTOS"}},
   {{"VALOR ACTUAL"}},
-  {{"EDITAR MES"}},
-  {{"EDITAR ANO"}},
   {{"ACERCA DE"}},
   {{"DESARROLLO POR AISUR"}},
-  {{"EDITAR ESTADO"}},
-  {{"CC"}},
   {{"MIN:"}},
-  {{"HS:"}},
 };
-
-
 
 /* returns a translated string; if no translation found - return the original
  * string.
