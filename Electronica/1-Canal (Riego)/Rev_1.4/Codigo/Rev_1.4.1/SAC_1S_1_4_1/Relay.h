@@ -24,12 +24,9 @@
  * Current Version: 0.1
  */
  
-
 #include "Arduino.h"
-
 #define MAX_RELAYS 1
-#define RELAY1_PIN 13
-
+#define RELAY1_PIN 2
 
   enum RelayState {
     RELAY_OFF=0,
@@ -41,38 +38,18 @@ typedef struct _Relay Relay;
 
   struct _Relay {
   byte gpio_pin;
-  byte role;
   byte state;
  };
  
-enum Roles{
-  R_DISCONNECTED=0,
-  R_IRRIGATION,
-  R_HUMIDIFIER,
-  R_VENTILATION,
-  R_HEATING,
-  R_COOLING,
-  R_LIGHT,
-};
 
 void relay_on (byte relayPin)
 {
-  
-
-
-    digitalWrite(relayPin, HIGH);
-
+      digitalWrite(relayPin, HIGH);
 }
-
-
 
 void relay_off (byte relayPin)
 {
   
-  
-
   digitalWrite(relayPin, LOW);
 
 }
-
-
