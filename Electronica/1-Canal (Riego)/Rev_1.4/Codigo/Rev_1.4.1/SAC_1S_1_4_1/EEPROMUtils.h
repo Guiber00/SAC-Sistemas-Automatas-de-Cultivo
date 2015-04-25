@@ -33,22 +33,19 @@ EEPROMUtils: this file contains all the information about the Configuration
  #define CONFIG_START 25 //Initial Address in the EEPROM.
 /*Struct with the configuration */
 typedef struct{
-  int rel1;//Relay 1 Role
-  int rel2;//Relay 2 Role
-  int rel3;//Relay 3 Role
-  float moisture_target; //the moisture target
-  float moisture_min;//Minimum Moisture target
-  float temps_max;//maximum Soil temperature
-  float temps_min;//Minimum Soil Temperature
-  int pump_cicle_length;//Pumping Cicle Length in minutes.
-  int pump_percent;//Pumping cicle irrigation percent.
-  float moisture_calib;//moisture calibration
+  int Relay;//Relay
+  float SMOp; //Soil Moisture Optimum
+  float SMmin;//Soil Moisture minimum
+  float STMax;//Maximum Soil temperature
+  float STmin;//Minimum Soil Temperature
+  int PICicle;//Percentaje Irrigation Cicle.
+  float SM_calib;//SM calibration
   int check_interval; //Interval Check for update the Sensors
   int flow_diameter;//Flow Diameter for Flow Size Sensor
   int active_languaje;//Active Languaje
-  int calib_FCapacity;//Field capacity calibration.
+  int calib_FC;//Field capacity calibration.
   int interval_time;//IntervalTime
-  int pump_cicle_seconds;
+  int TICicle;
   
 }Configuration;
 
@@ -58,21 +55,18 @@ typedef struct{
  */
 Configuration getDefaultConfig(){
  Configuration default_config;
-  default_config.rel1=0;
-  default_config.rel1=1;
-  default_config.rel1=2;
-  default_config.moisture_target=60;
-  default_config.moisture_min=40;
-  default_config.temps_max=36.0;
-  default_config.temps_min=6.0;
-  default_config.pump_cicle_length=0;
-  default_config.pump_cicle_seconds=6;
-  default_config.pump_percent=50;
+  default_config.Relay=0;
+  default_config.SMOp=60;
+  default_config.SMmin=40;
+  default_config.STMax=36.0;
+  default_config.STmin=6.0;
+  default_config.TICicle=6;
+  default_config.PICicle=50;
   default_config.check_interval=15;
-  default_config.moisture_calib=0.0;
+  default_config.SM_calib=0.0;
   default_config.flow_diameter=16;
   default_config.active_languaje=0;
-  default_config.calib_FCapacity=0;
+  default_config.calib_FC=0;
 
   return default_config;
 }
