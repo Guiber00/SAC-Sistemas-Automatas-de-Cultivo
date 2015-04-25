@@ -36,8 +36,24 @@
  * 1.3. Improved all the Functionality for 20x4 Screen and improved for 1.3 PCB Version. written by victor suarez suarez.garcia.victor@gmail.com and David Cuevas mr.cavern@gmail.com in April 2014
  * 
  * 
- * Current Version: 1.4.1
+ * Current Version: 1.4.1.1
  *************************************************************************/
+
+/* PARAMETERS NAME:
+
+  SM=Soil Moisture
+  SMOp=Soil Moisture Optimun
+  SMmin=Soil Moisture minimun
+  FC=Field Capacity
+  STMax=Soil Temperature Maximun
+  STmin=Soil Temperature minimun
+  TICicle=Total Irrigation Cicle (seconds)
+  PICicle=Percentaje Irrigation Cicle (%)
+ 
+ 
+ */
+
+
 
 
 
@@ -86,13 +102,13 @@ enum States
   CALIB_SAT,
   ESTADO,
   EDICION,
-  SELECCION,
+  CONFIG_MENU,
 
 };
 /*
  * DIFFERENT STATES IN SELECTION MODE
  */
-enum Seleccion_States
+enum CONFIG_MENU_States
 {
   MENU,
   FECHA,
@@ -125,11 +141,10 @@ enum s_selectionTimeStates
 };
 enum s_selectStatus
 {
-  S_HSO=0,
-  S_HSMIN,
-  S_PCICLE,
-  S_PCICLESECONDS,
-  S_PINTERVAL,
+  S_SMOp,
+  S_SMmin,
+  S_TICicle,
+  S_PICicle,
   S_TSMAX,
   
 };
@@ -171,7 +186,7 @@ SerLCD mylcd(SSerial,NUM_COLS,NUM_ROWS);
 /*
  * VALUES, STATES & CONFIG
  */
-boolean actualizar_pantalla;
+boolean refresh_LCD;
 Configuration current_config;
 tmElements_t tm;
 cached_sensors current_sensorsvalues;
@@ -180,7 +195,6 @@ State previous_state;
 
 /*
  * RELAY CONFIG
- *EACH RELAY USES A ROLE TO CONTROL IT'S FUNCTIONS
  */
 
 
@@ -202,7 +216,7 @@ byte button_down_state=LOW;
 byte button_center_state=LOW;
 byte center_pressed_state=0;
 byte up_pressed_state=0;
-int selectionStatus=S_HSO;
+int selectionStatus=S_SMOp;
 byte editHours;
 byte editMinutes;
 byte editDays;
@@ -238,14 +252,14 @@ void setup()
   SSerial.begin(9600);
   mylcd.begin();
   setup_pins();
-  actualizar_pantalla=true;
+  refresh_LCD=true;
   // setupFlowRate();
 
   irrigating=false;
   current_selectionstate=MENU;
   if(!load_Settings(current_config)){
     current_config=reset_Settings();
-    current_mstate=SELECCION;
+    current_mstate=CONFIG_MENU;
   }
   else{
     current_mstate=ESTADO; 
@@ -255,13 +269,12 @@ void setup()
 /*Initialize Global Variables. */
 void initializeGlobalVars(){
   active_language =current_config.active_languaje;
-  current_sensorsvalues.cached_tempmax=(current_config.temps_max!=0)?current_config.temps_max:36;
-  current_sensorsvalues.cached_tempmin=(current_config.temps_min!=0)?current_config.temps_min:4;
-  current_sensorsvalues.cached_minmoisture=(current_config.moisture_min!=0)?current_config.moisture_min:40;
-  current_sensorsvalues.cached_maxmoisture=(current_config.moisture_target!=0)?current_config.moisture_target:60;
-  current_sensorsvalues.cached_cicle_length=(current_config.pump_cicle_length!=0)?current_config.pump_cicle_length:0;
-  current_sensorsvalues.cached_pump_percent=(current_config.pump_percent!=0)?current_config.pump_percent:50;
-  current_sensorsvalues.cached_pump_cicle_seconds=(current_config.pump_cicle_seconds!=0)?	           current_config.pump_cicle_seconds:6;
+  current_sensorsvalues.cached_STMax=(current_config.STMax!=0)?current_config.STMax:36;
+  current_sensorsvalues.cached_STmin=(current_config.STmin!=0)?current_config.STmin:4;
+  current_sensorsvalues.cached_SMmin=(current_config.SMmin!=0)?current_config.SMmin:40;
+  current_sensorsvalues.cached_SMOp=(current_config.SMOp!=0)?current_config.SMOp:60;
+  current_sensorsvalues.cached_TICicle=(current_config.TICicle!=0)?current_config.TICicle:6;
+  current_sensorsvalues.cached_PICicle=(current_config.PICicle!=0)?current_config.PICicle:50;
   time1=millis();
 }
 /**
@@ -272,7 +285,7 @@ void setup_pins(){
   pinMode(BUTTON_DOWN_PIN,INPUT);
   pinMode(BUTTON_CENTER_PIN,INPUT);
 
-  pinMode(SOIL_MOISTURE_POWER_PIN, OUTPUT);
+  pinMode(SM_POWER_PIN, OUTPUT);
   for(int i=0;i<MAX_RELAYS;i++)
   {
     pinMode(relay[i].gpio_pin,OUTPUT);
@@ -285,11 +298,11 @@ void loop(){
   RTCread(tm);
 
   //ALWAYS UPDATE SCREEN WHEN STATE CHANGES
-  update_State(current_sensorsvalues,tm,current_config.calib_FCapacity,interval_mode, current_config.interval_time, cerrojo_intervalo, IntervalTime);
+  update_State(current_sensorsvalues,tm,current_config.calib_FC,interval_mode, current_config.interval_time, cerrojo_intervalo, IntervalTime);
   current_state=read_sensors(current_sensorsvalues);
   if(current_mstate==ESTADO){
     if(state_changed(current_state,previous_state) || time_between(lastUpdate,tm)>1){
-      actualizar_pantalla=true; 
+      refresh_LCD=true; 
       previous_state=current_state;
       lastUpdate=tm;
     }
@@ -442,16 +455,15 @@ int button_center_pressed()
 /*
  * HANDLE EVENTS FOR STATE SCREEN & SELECT MODE
  * CASE ESTADO: STATUS SCREEN, DEFAULT VIEW.
- * CASE SELECCION: SELECTION STATE, CALLS THE EVENT HANDLER FOR THIS STATE
+ * CASE CONFIG_MENU: SELECTION STATE, CALLS THE EVENT HANDLER FOR THIS STATE
  */
 void handleEvent(int event)
 {
   if(event==BUTTONCENTERLONG){
-    //Clear LCD Screen
     mylcd.clear();
-    current_mstate=SELECCION;
+    current_mstate=CONFIG_MENU;
     current_menu=0; 
-    actualizar_pantalla=true;
+    refresh_LCD=true;
     mylcd.underlineCursorOff();
     mylcd.boxCursorOff();
     return;
@@ -464,12 +476,12 @@ void handleEvent(int event)
     {
       mylcd.clear();
       current_mstate=EDICION;
-      actualizar_pantalla=true;
-      selectionStatus=S_HSO;
+      refresh_LCD=true;
+      selectionStatus=S_SMOp;
     }
 
     break; 
-  case SELECCION:
+  case CONFIG_MENU:
 
     handleEventSelection(event);
 
@@ -498,7 +510,7 @@ void handleEventSelectStatus(int event)
   if(event==BUTTONCENTER)
   {
     isEditing=!isEditing;
-    actualizar_pantalla=true; 
+    refresh_LCD=true; 
   }
   if(!isEditing){
     if(event==BUTTONDOWN)
@@ -507,7 +519,7 @@ void handleEventSelectStatus(int event)
       if(selectionStatus<0){
         selectionStatus=5;
       }
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     } 
     if(event==BUTTONUP)
     {
@@ -515,25 +527,24 @@ void handleEventSelectStatus(int event)
       if(selectionStatus>5){
         selectionStatus=0;
       }
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
 
     if(event==TIMEOUT)
     {
 
-      selectionStatus=S_HSO;
+      selectionStatus=S_SMOp;
       current_mstate=ESTADO;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       mylcd.clear();
       mylcd.boxCursorOff(); 
       //Store current state settings
-      current_config.moisture_target=current_sensorsvalues.cached_maxmoisture;
-      current_config.moisture_min=current_sensorsvalues.cached_minmoisture;
-      current_config.temps_max=current_sensorsvalues.cached_tempmax;
-      current_config.temps_min=current_sensorsvalues.cached_tempmin;
-      current_config.pump_cicle_length=current_sensorsvalues.cached_cicle_length;
-      current_config.pump_percent=current_sensorsvalues.cached_pump_percent;
-      current_config.pump_cicle_seconds=current_sensorsvalues.cached_pump_cicle_seconds;
+      current_config.SMOp=current_sensorsvalues.cached_SMOp;
+      current_config.SMmin=current_sensorsvalues.cached_SMmin;
+      current_config.STMax=current_sensorsvalues.cached_STMax;
+      current_config.STmin=current_sensorsvalues.cached_STmin;
+      current_config.PICicle=current_sensorsvalues.cached_PICicle;
+      current_config.TICicle=current_sensorsvalues.cached_TICicle;
       store_Settings(current_config);
     }
 
@@ -542,192 +553,166 @@ void handleEventSelectStatus(int event)
 
     switch(selectionStatus)
     {
-    case S_HSO:
+    case S_SMOp:
       if(event==BUTTONDOWN){
-        current_sensorsvalues.cached_maxmoisture--;
-        if(current_sensorsvalues.cached_maxmoisture<current_sensorsvalues.cached_minmoisture){
-          current_sensorsvalues.cached_maxmoisture=99;
+        current_sensorsvalues.cached_SMOp--;
+        if(current_sensorsvalues.cached_SMOp<current_sensorsvalues.cached_SMmin){
+          current_sensorsvalues.cached_SMOp=99;
         }
 
 
 
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       if(event==BUTTONUP){
-        current_sensorsvalues.cached_maxmoisture++;
-        if(current_sensorsvalues.cached_maxmoisture>99){
-          current_sensorsvalues.cached_maxmoisture=current_sensorsvalues.cached_minmoisture;
+        current_sensorsvalues.cached_SMOp++;
+        if(current_sensorsvalues.cached_SMOp>99){
+          current_sensorsvalues.cached_SMOp=current_sensorsvalues.cached_SMmin;
         }
 
 
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       if(event==BUTTONUPLONG){
-        current_sensorsvalues.cached_maxmoisture+=10;
-        if(current_sensorsvalues.cached_maxmoisture>99){
-          current_sensorsvalues.cached_maxmoisture=current_sensorsvalues.cached_minmoisture;
+        current_sensorsvalues.cached_SMOp+=10;
+        if(current_sensorsvalues.cached_SMOp>99){
+          current_sensorsvalues.cached_SMOp=current_sensorsvalues.cached_SMmin;
         }
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       if(event==BUTTONDOWLONG){
-        current_sensorsvalues.cached_maxmoisture-=10;
-        if(current_sensorsvalues.cached_maxmoisture<00){
-          current_sensorsvalues.cached_maxmoisture=99;
+        current_sensorsvalues.cached_SMOp-=10;
+        if(current_sensorsvalues.cached_SMOp<00){
+          current_sensorsvalues.cached_SMOp=99;
         }
 
 
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       break;
-    case S_HSMIN:
+    case S_SMmin:
       if(event==BUTTONDOWN){
-        current_sensorsvalues.cached_minmoisture--;
-        if(current_sensorsvalues.cached_minmoisture<0){
-          current_sensorsvalues.cached_minmoisture=100;
+        current_sensorsvalues.cached_SMmin--;
+        if(current_sensorsvalues.cached_SMmin<0){
+          current_sensorsvalues.cached_SMmin=100;
         }
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       if(event==BUTTONDOWLONG){
-        current_sensorsvalues.cached_minmoisture-=10;
-        if(current_sensorsvalues.cached_minmoisture<0){
-          current_sensorsvalues.cached_minmoisture=100;
+        current_sensorsvalues.cached_SMmin-=10;
+        if(current_sensorsvalues.cached_SMmin<0){
+          current_sensorsvalues.cached_SMmin=100;
         }
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       if(event==BUTTONUP){
-        current_sensorsvalues.cached_minmoisture++;
-        if(current_sensorsvalues.cached_minmoisture>99){
-          current_sensorsvalues.cached_minmoisture=0;
+        current_sensorsvalues.cached_SMmin++;
+        if(current_sensorsvalues.cached_SMmin>99){
+          current_sensorsvalues.cached_SMmin=0;
         }       
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       if(event==BUTTONUPLONG){
-        current_sensorsvalues.cached_minmoisture+=10;
-        if(current_sensorsvalues.cached_minmoisture>99){
-          current_sensorsvalues.cached_minmoisture=0;
+        current_sensorsvalues.cached_SMmin+=10;
+        if(current_sensorsvalues.cached_SMmin>99){
+          current_sensorsvalues.cached_SMmin=0;
         }       
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       break;
-    case S_PCICLE:
+
+    case S_PICicle:
       if(event==BUTTONDOWN)
       {
-        current_sensorsvalues.cached_cicle_length--;
-        if(current_sensorsvalues.cached_cicle_length<0){
-          current_sensorsvalues.cached_cicle_length=120;
-        }
-        actualizar_pantalla=true;
+        current_sensorsvalues.cached_PICicle--;
+        if(current_sensorsvalues.cached_PICicle<0){
+          current_sensorsvalues.cached_PICicle=100;
+        }   
+        refresh_LCD=true;
       }
       if(event==BUTTONUP)
       {
-        current_sensorsvalues.cached_cicle_length++;
-        if(current_sensorsvalues.cached_cicle_length>120){
-          current_sensorsvalues.cached_cicle_length=0;
-        }
-        actualizar_pantalla=true;  
-      }  
-      if(event==BUTTONDOWLONG){
-        current_sensorsvalues.cached_cicle_length-=10;
-        if(current_sensorsvalues.cached_cicle_length<0){
-          current_sensorsvalues.cached_cicle_length=120;
+        current_sensorsvalues.cached_PICicle++;
+        if(current_sensorsvalues.cached_PICicle>100){
+          current_sensorsvalues.cached_PICicle=0;
         }   
-
-        actualizar_pantalla=true;
-      }  
-
-      break;
-    case S_PINTERVAL:
-      if(event==BUTTONDOWN)
-      {
-        current_sensorsvalues.cached_pump_percent--;
-        if(current_sensorsvalues.cached_pump_percent<0){
-          current_sensorsvalues.cached_pump_percent=100;
-        }   
-        actualizar_pantalla=true;
-      }
-      if(event==BUTTONUP)
-      {
-        current_sensorsvalues.cached_pump_percent++;
-        if(current_sensorsvalues.cached_pump_percent>100){
-          current_sensorsvalues.cached_pump_percent=0;
-        }   
-        actualizar_pantalla=true;  
+        refresh_LCD=true;  
       }
       if(event==BUTTONUPLONG){
-        current_sensorsvalues.cached_pump_percent+=10;
-        if(current_sensorsvalues.cached_pump_percent>100){
-          current_sensorsvalues.cached_pump_percent=0;
+        current_sensorsvalues.cached_PICicle+=10;
+        if(current_sensorsvalues.cached_PICicle>100){
+          current_sensorsvalues.cached_PICicle=0;
         }       
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       if(event==BUTTONDOWLONG){
-        current_sensorsvalues.cached_pump_percent-=10;
-        if(current_sensorsvalues.cached_pump_percent<0){
-          current_sensorsvalues.cached_pump_percent=100;
+        current_sensorsvalues.cached_PICicle-=10;
+        if(current_sensorsvalues.cached_PICicle<0){
+          current_sensorsvalues.cached_PICicle=100;
         }       
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       break;
       
     case S_TSMAX:
       if(event==BUTTONUP){
-        current_sensorsvalues.cached_tempmax++;
-        if(current_sensorsvalues.cached_tempmax>55){
-          current_sensorsvalues.cached_tempmax=0;
+        current_sensorsvalues.cached_STMax++;
+        if(current_sensorsvalues.cached_STMax>55){
+          current_sensorsvalues.cached_STMax=0;
         } 
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       if(event==BUTTONDOWN){
-        current_sensorsvalues.cached_tempmax--;
-        if(current_sensorsvalues.cached_tempmax<0){
-          current_sensorsvalues.cached_tempmax=55;
+        current_sensorsvalues.cached_STMax--;
+        if(current_sensorsvalues.cached_STMax<0){
+          current_sensorsvalues.cached_STMax=55;
         } 
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       if(event==BUTTONUPLONG){
-        current_sensorsvalues.cached_tempmax+=10;
-        if(current_sensorsvalues.cached_tempmax>55){
-          current_sensorsvalues.cached_tempmax=0;
+        current_sensorsvalues.cached_STMax+=10;
+        if(current_sensorsvalues.cached_STMax>55){
+          current_sensorsvalues.cached_STMax=0;
         }           
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       if(event==BUTTONDOWLONG){
-        current_sensorsvalues.cached_tempmax-=10;
-        if(current_sensorsvalues.cached_tempmax<0){
-          current_sensorsvalues.cached_tempmax=50;
+        current_sensorsvalues.cached_STMax-=10;
+        if(current_sensorsvalues.cached_STMax<0){
+          current_sensorsvalues.cached_STMax=50;
         }           
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }      
 
       break;
-   case S_PCICLESECONDS:
+   case S_TICicle:
   if(event==BUTTONUP){
-        current_sensorsvalues.cached_pump_cicle_seconds++;
-        if(current_sensorsvalues.cached_pump_cicle_seconds>59){
-          current_sensorsvalues.cached_pump_cicle_seconds=0;
+        current_sensorsvalues.cached_TICicle++;
+        if(current_sensorsvalues.cached_TICicle>59){
+          current_sensorsvalues.cached_TICicle=0;
         } 
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       if(event==BUTTONDOWN){
-        current_sensorsvalues.cached_pump_cicle_seconds--;
-        if(current_sensorsvalues.cached_pump_cicle_seconds<0){
-          current_sensorsvalues.cached_pump_cicle_seconds=59;
+        current_sensorsvalues.cached_TICicle--;
+        if(current_sensorsvalues.cached_TICicle<0){
+          current_sensorsvalues.cached_TICicle=59;
         } 
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       if(event==BUTTONUPLONG){
-        current_sensorsvalues.cached_pump_cicle_seconds+=10;
-        if(current_sensorsvalues.cached_pump_cicle_seconds>59){
-          current_sensorsvalues.cached_pump_cicle_seconds=0;
+        current_sensorsvalues.cached_TICicle+=10;
+        if(current_sensorsvalues.cached_TICicle>59){
+          current_sensorsvalues.cached_TICicle=0;
         }           
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
       if(event==BUTTONDOWLONG){
-        current_sensorsvalues.cached_pump_cicle_seconds-=10;
-        if(current_sensorsvalues.cached_pump_cicle_seconds<0){
-          current_sensorsvalues.cached_pump_cicle_seconds=59;
+        current_sensorsvalues.cached_TICicle-=10;
+        if(current_sensorsvalues.cached_TICicle<0){
+          current_sensorsvalues.cached_TICicle=59;
         }           
-        actualizar_pantalla=true;
+        refresh_LCD=true;
       }
     
   break;
@@ -756,7 +741,7 @@ void handleEventSelection(int event)
       current_selectionstate=main_menu[current_menu].state;
       select_language=0;
       current_selectionDateState=0;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       editHours=tm.Hour;
       editMinutes=tm.Minute;
       editDays=tm.Day;
@@ -772,14 +757,14 @@ void handleEventSelection(int event)
       mylcd.clear();
       current_menu++;
       current_menu= current_menu%MAXMENUITEMS;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
     if(event==BUTTONUP)
     {
       mylcd.clear();
       current_menu=(current_menu==0)? MAXMENUITEMS-1: current_menu-1;
       current_menu= current_menu%MAXMENUITEMS;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
     break;
 
@@ -800,8 +785,8 @@ void handleEventSelection(int event)
   case CALIBRACION_SAT:
     if(event==BUTTONCENTER)
     {
-      int calib=readFCapacityValue();
-      current_config.calib_FCapacity=calib;
+      int calib=readFCValue();
+      current_config.calib_FC=calib;
       store_Settings(current_config);
       current_selectionstate=MENU;
       interval_mode=I_INTERVAL;
@@ -810,22 +795,22 @@ void handleEventSelection(int event)
      interval_mode=I_CONTINOUS;
     }
     
-    actualizar_pantalla=true;
+    refresh_LCD=true;
     break;
   case RESET_CONFIG:
 
     current_config=reset_Settings();
     initializeGlobalVars();
-    current_mstate=SELECCION;
+    current_mstate=CONFIG_MENU;
     current_selectionstate=MENU;
-    actualizar_pantalla=true;
+    refresh_LCD=true;
     break;
   case ABOUT:
     if(event==BUTTONCENTER)
     {
 
       current_selectionstate=MENU;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       mylcd.clear();
     }
     break;
@@ -833,7 +818,7 @@ void handleEventSelection(int event)
     current_mstate=ESTADO;
     current_selectionstate=MENU;
     mylcd.clear();
-    actualizar_pantalla=true;
+    refresh_LCD=true;
     break;
   }
 }
@@ -849,24 +834,24 @@ void handleEventSelectionDate(int event)
     {
       current_selectionDateState--;
       current_selectionDateState%=5;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     } 
     if(event==BUTTONDOWN)
     {
       current_selectionDateState++;
       current_selectionDateState%=5;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
     if(event==BUTTONCENTER)
     {
       isEditing=true;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       mylcd.clear(); 
     }
     if(current_selectionDateState==SAVE && event==BUTTONCENTER)
     {
       current_selectionstate=MENU;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       current_menu=0;
       mylcd.clear();
       tm.Day=editDays;
@@ -877,7 +862,7 @@ void handleEventSelectionDate(int event)
     if(current_selectionDateState==BACK && event==BUTTONCENTER)
     {
       current_selectionstate=MENU;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       current_menu=0;
       mylcd.clear();
     }
@@ -897,7 +882,7 @@ void handleEventSelectionHour(int event)
       tm.Minute=editMinutes;
       setHour(tm);
       current_selectionstate=MENU;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       current_menu=0;
       mylcd.clear();
       cTime=S_SELECTHOURS;
@@ -906,7 +891,7 @@ void handleEventSelectionHour(int event)
   case S_BACKTIME:
     if(event==BUTTONCENTER){
       current_selectionstate=MENU;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       current_menu=0;
       mylcd.clear();
       cTime=S_SELECTHOURS;
@@ -916,21 +901,21 @@ void handleEventSelectionHour(int event)
   default:
     if(event==BUTTONDOWN)
     {
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       cTime++;
       cTime%= 4; 
 
     }
     if(event==BUTTONUP)
     {
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       cTime--;
       cTime= (cTime<0)?4:cTime%4; 
 
     }
     if(event==BUTTONCENTER)
     {
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       isEditing=true;
       mylcd.clear();
     }
@@ -946,17 +931,17 @@ void handleEventEditingDate(int event)
       editDays++;
       editDays%=getDaysofMonth(editMonths);
       editDays=(getDaysofMonth(editMonths)>31)?editDays=1:editDays;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
     if(event==BUTTONUP){
       editDays--;
       editDays%=getDaysofMonth(editMonths);
       editDays=(getDaysofMonth(editMonths)<1)?editDays=getDaysofMonth(editMonths):editDays;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
     if(event==BUTTONCENTER){
       isEditing=false;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       mylcd.clear();
     }
     break;
@@ -965,17 +950,17 @@ void handleEventEditingDate(int event)
       editMonths++;
       editMonths=(editMonths%12)+1;
       editMonths=(editMonths>12)?editMonths=1:editMonths;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
     if(event==BUTTONUP){
       editMonths--;
       editMonths=(editMonths%12)+1;
       editMonths=(editMonths<1)?editMonths=12:editMonths;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
     if(event==BUTTONCENTER){
       isEditing=false;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       mylcd.clear();
     }
     break;
@@ -983,16 +968,16 @@ void handleEventEditingDate(int event)
     if(event==BUTTONDOWN){
       editYears++;
       editYears=(editYears>2032)?editYears=2000:editYears;  
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
     if(event==BUTTONUP){
       editYears--;
       editYears=(editYears<2000)?editYears=2032:editYears;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
     if(event==BUTTONCENTER){
       isEditing=false;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       mylcd.clear();
     }
     break;
@@ -1010,28 +995,28 @@ void handleEventEditingHour(int event)
     if(event==BUTTONDOWN){
       editHours++;
       editHours%= 24;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
     if(event==BUTTONUP){
       editHours--;
       editHours=(editHours<0)?23:editHours%24;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
   case S_SELECTMINUTES:
     if(event==BUTTONDOWN){
       editMinutes++;
       editMinutes%= 60;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
     if(event==BUTTONUP){
       editMinutes--;
       editMinutes=(editMinutes<0)?259:editMinutes%60;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
     }
   default:
     if(event==BUTTONCENTER){
       isEditing=false;
-      actualizar_pantalla=true;
+      refresh_LCD=true;
       mylcd.clear();
     }
     break; 
@@ -1043,11 +1028,11 @@ void handleEventEditingHour(int event)
  * DRAWS  INTERFACE IN STATUS MODE & SELECTION MODE
  */
 void drawUI(State & state){
-  if(actualizar_pantalla){
+  if(refresh_LCD){
     switch(current_mstate)
     {
-    case SELECCION:
-      drawSeleccion();
+    case CONFIG_MENU:
+      drawCONFIG_MENU();
       break;
     case  ESTADO:
 
@@ -1058,7 +1043,7 @@ void drawUI(State & state){
       break;
 
     }
-    actualizar_pantalla=false;
+    refresh_LCD=false;
   }
 
 }
@@ -1077,7 +1062,7 @@ void drawState(State & state)
 /*
  * DRAWS INTERFACE FOR THE DIFFERENT MENUS
  */
-void drawSeleccion()
+void drawCONFIG_MENU()
 {
 
   switch(current_selectionstate)
@@ -1135,84 +1120,54 @@ void drawMenu()
  */
 void drawIrrigationState(State & state)
 {
+ 
   //Line1
   mylcd.setPosition(1,0);
-  if(tm.Hour<10) mylcd.print("0");
-  mylcd.print(tm.Hour);
-  mylcd.print(":");
-  if(tm.Minute<10) mylcd.print("0");
-  mylcd.print(tm.Minute);
-  mylcd.print("  ");
-  if(tm.Day<10) mylcd.print("0");
-  mylcd.print(tm.Day);
-  mylcd.print("/");
-  if(tm.Month<10) mylcd.print("0");
-  mylcd.print(tm.Month);
-  mylcd.print("/");
-  mylcd.print(tmYearToCalendar(tm.Year));
-  if(state.field_capacity)
-  { 
-    mylcd.print(" ");
-    mylcd.print(translate(S_FC));
-  }
-  else
-  {
-    mylcd.print("   "); 
-  }
-  //Line2
-  mylcd.setPosition(2,0);
   mylcd.print(translate(S_S));
-  if(state.moisture_MAX<10)
+  if(state.SMOp<10)
     mylcd.print("0");
-  mylcd.print((int)state.moisture_MAX);
+  mylcd.print((int)state.SMOp);
   mylcd.print(" ");
   mylcd.print(translate(S_MIN));
-  if(state.moisture_MIN<10)
+  if(state.SMmin<10)
     mylcd.print("0");
-  mylcd.print((int)state.moisture_MIN);
+  mylcd.print((int)state.SMmin);
   mylcd.print(" ");
   mylcd.print("[");
-  if(state.current_moisture<10)
+  if(state.current_SM<10)
     mylcd.print("0");
-  mylcd.print((int)state.current_moisture);
+  mylcd.print((int)state.current_SM);
   mylcd.print("");
   mylcd.print("]%");
-  if(state.current_moisture<=99)
+  if(state.current_SM<=99)
     mylcd.print(" ");
 
 
 
-  //line3
-  mylcd.setPosition(3,0);
+  //line2
+  mylcd.setPosition(2,0);
   mylcd.print(translate(CICLO));
-  int minutes=state.cicle_length_seconds/60;
-  if(minutes<100)
-    mylcd.print("0");
-  if(minutes<10)
-    mylcd.print("0");
-  mylcd.print(minutes);
-  mylcd.print("'");
-byte seconds= current_sensorsvalues.cached_pump_cicle_seconds;
+  byte seconds= current_sensorsvalues.cached_TICicle;
   if(seconds<10)
     mylcd.print("0");
   mylcd.print(seconds);
   mylcd.print("''");
   mylcd.print("ON");
-  if(current_sensorsvalues.cached_pump_percent<100)
+  if(current_sensorsvalues.cached_PICicle<100)
     mylcd.print("0");
-  if(current_sensorsvalues.cached_pump_percent<10)
+  if(current_sensorsvalues.cached_PICicle<10)
     mylcd.print("0");
-  mylcd.print(current_sensorsvalues.cached_pump_percent);
+  mylcd.print(current_sensorsvalues.cached_PICicle);
   mylcd.print("%");
 
-  //line4
-  mylcd.setPosition(4,0);
-  mylcd.print(translate(ST_MAX));
-  if(state.temps_max<10)
+  //line3
+  mylcd.setPosition(3,0);
+  mylcd.print(translate(STMax));
+  if(state.STMax<10)
     mylcd.print("0");
-  mylcd.print((int)state.temps_max);
+  mylcd.print((int)state.STMax);
   mylcd.print(" ");
-  int currenttemp=state.current_temps;
+  int currenttemp=state.current_ST;
   if(currenttemp>=0){
     mylcd.print("+"); 
   }
@@ -1228,6 +1183,11 @@ byte seconds= current_sensorsvalues.cached_pump_cicle_seconds;
     mylcd.print("--"); 
   }
   mylcd.print("C");
+  
+  
+  //line4
+  
+  
   //Serial.println(line1);
 
   //Serial.println(total);
@@ -1249,11 +1209,11 @@ void update_relay_state (void)
     switch (rele.role){
     case R_IRRIGATION:
       relaystate=false;
-      if(!current_state.field_capacity){
+      if(!current_state.FC){
 
-        if (current_state.current_temps==-1000 ||( current_state.current_temps < current_state.temps_max))
+        if (current_state.current_ST==-1000 ||( current_state.current_ST < current_state.STMax))
         {
-          if (rele.state==RELAY_OFF && current_state.current_moisture <= current_state.moisture_MIN )
+          if (rele.state==RELAY_OFF && current_state.current_SM <= current_state.SMmin )
           {
 
             rele.state=RELAY_ON;
@@ -1263,7 +1223,7 @@ void update_relay_state (void)
             interval_mode=I_CONTINOUS;
           }
           else{
-            if ((rele.state==RELAY_ON || rele.state==RELAY_WAIT) && (current_state.current_moisture <= current_state.moisture_MAX) )
+            if ((rele.state==RELAY_ON || rele.state==RELAY_WAIT) && (current_state.current_SM <= current_state.SMOp) )
             {
                if(!checkPumpCicle(relaystate,lastEvent)){
                   if(rele.state==RELAY_ON){
@@ -1288,7 +1248,7 @@ void update_relay_state (void)
             }
           }
         }
-        if(current_state.current_moisture >= current_state.moisture_MAX){
+        if(current_state.current_SM >= current_state.SMOp){
           interval_mode=I_INTERVAL;
         }
         
@@ -1321,12 +1281,12 @@ void update_relay_state (void)
 /*
  * CHECK IRRIGATION CICLE DURATION.
  * IRRIGATION IS CONFIGURABLE TO BE ON CONTINOUS MODE OR AT INTERVALS
- * BY INDICATING PUMP PERCENTAGE.
+ * BY INDICATING PUMP PICicleAGE.
  * EXAMPLE: PUMP DURING FOUR MINUTES AT 50%. PUMPING WOULD BE ONE MINUTES ON & ONE MINUTES OFF, UNTIL COMPLETION OF THE CICLE OF FOUR MINUTES;
  */
 boolean checkPumpCicle(boolean irrigating,long lastEvent){
-  double totalSeconds=((current_sensorsvalues.cached_cicle_length * 60))+current_sensorsvalues.cached_pump_cicle_seconds;
-  totalSeconds= (totalSeconds * current_sensorsvalues.cached_pump_percent)/100;
+  double totalSeconds=current_sensorsvalues.cached_TICicle;
+  totalSeconds= (totalSeconds * current_sensorsvalues.cached_PICicle)/100;
   if((millis()-lastEvent)<totalSeconds*1000) return true;
   else return false;
   
@@ -1460,8 +1420,8 @@ void drawCalibrationSat()
   mylcd.setPosition(2,0);
   mylcd.print(translate(S_CURRENTVALUE));
   mylcd.print(F(": "));
-  mylcd.print(readFCapacityValue());
-  actualizar_pantalla=true;
+  mylcd.print(readFCValue());
+  refresh_LCD=true;
 
 }
 byte getDaysofMonth(byte month) {  
@@ -1536,85 +1496,56 @@ void static drawAbout()
 
 void static drawSelectStatus(State & state)
 {
+  //Line1
   mylcd.setPosition(1,0);
-  if(tm.Hour<10) mylcd.print("0");
-  mylcd.print(tm.Hour);
-  mylcd.print(":");
-  if(tm.Minute<10) mylcd.print("0");
-  mylcd.print(tm.Minute);
-  mylcd.print("  ");
-  if(tm.Day<10) mylcd.print("0");
-  mylcd.print(tm.Day);
-  mylcd.print("/");
-  if(tm.Month<10) mylcd.print("0");
-  mylcd.print(tm.Month);
-  mylcd.print("/");
-  mylcd.print(tmYearToCalendar(tm.Year));
-  if(state.field_capacity)
-  { 
-    mylcd.print(" ");
-    mylcd.print(translate(S_FC));
-  }
-  else
-  {
-    mylcd.print("   "); 
-  }
-  //Line2
-  mylcd.setPosition(2,0);
   mylcd.print(translate(S_S));
-  if(state.moisture_MAX<10)
+  if(state.SMOp<10)
     mylcd.print("0");
-  mylcd.print((int)state.moisture_MAX);
+  mylcd.print((int)state.SMOp);
   mylcd.print(" ");
   mylcd.print("MIN:");
-  if(state.moisture_MIN<10)
+  if(state.SMmin<10)
     mylcd.print("0");
-  mylcd.print((int)state.moisture_MIN);
+  mylcd.print((int)state.SMmin);
   mylcd.print(" ");
   mylcd.print("[");
-  if(state.current_moisture<10)
+  if(state.current_SM<10)
     mylcd.print("0");
-  mylcd.print((int)state.current_moisture);
+  mylcd.print((int)state.current_SM);
   mylcd.print("");
   mylcd.print("]%");
-  if(state.moisture_target<=99)
+  if(state.SMOp<=99)
     mylcd.print(" ");
 
 
 
-  //line3
-  mylcd.setPosition(3,0);
+  //line2
+  mylcd.setPosition(2,0);
   mylcd.print(translate(CICLO));
-  int minutes=state.cicle_length_seconds/60;
-  if(minutes<100)
-    mylcd.print("0");
-  if(minutes<10)
-    mylcd.print("0");
-  mylcd.print(minutes);
-  mylcd.print("'");
-  byte seconds= current_sensorsvalues.cached_pump_cicle_seconds;
+         
+  byte seconds= current_sensorsvalues.cached_TICicle;
   if(seconds<10)
     mylcd.print("0");
   mylcd.print(seconds);
   mylcd.print("''");
   mylcd.print("ON");
-  if(current_sensorsvalues.cached_pump_percent<100)
+  if(current_sensorsvalues.cached_PICicle<100)
     mylcd.print("0");
-  if(current_sensorsvalues.cached_pump_percent<10)
+  if(current_sensorsvalues.cached_PICicle<10)
     mylcd.print("0");
-  mylcd.print(current_sensorsvalues.cached_pump_percent);
+  mylcd.print(current_sensorsvalues.cached_PICicle);
   mylcd.print("%");
 
-  //line4
-  mylcd.setPosition(4,0);
-  mylcd.print(translate(ST_MAX));
-  if(state.temps_max<10)
+  //line3
+  mylcd.setPosition(3,0);
+  mylcd.print(translate(STMax));
+  if(state.STMax<10)
     mylcd.print("0");
-  mylcd.print((int)state.temps_max);
+  mylcd.print((int)state.STMax);
   mylcd.print(" ");
 
   mylcd.print(" ");
-  int currenttemp=state.current_temps;
+  int currenttemp=state.current_ST;
   if(currenttemp>=0){
     mylcd.print("+"); 
   }
@@ -1633,70 +1564,63 @@ void static drawSelectStatus(State & state)
   mylcd.underlineCursorOff();
   switch(selectionStatus)
   {
-  case S_HSO:
+  case S_SMOp:
 
     if(!isEditing){
-      mylcd.setPosition(2,2);
+      mylcd.setPosition(1,2);
       mylcd.boxCursorOn(); 
     }
     else{
-      mylcd.setPosition(2,5);
+      mylcd.setPosition(1,5);
       mylcd.underlineCursorOn(); 
     }
     break;
-  case S_HSMIN:
+  case S_SMmin:
     if(!isEditing){
-      mylcd.setPosition(2,9);
+      mylcd.setPosition(1,9);
       mylcd.boxCursorOn(); 
     }
     else{
-      mylcd.setPosition(2,12);
+      mylcd.setPosition(1,12);
       mylcd.underlineCursorOn(); 
     }
     break;
+    
+    case S_PICicle:
+    if(!isEditing){
+      mylcd.setPosition(2,15);
+      mylcd.boxCursorOn(); 
+    }
+    else{
+      mylcd.setPosition(2,19);
+      mylcd.underlineCursorOn(); 
+    }
+    break;
+    case S_TICicle:
+  
+    if(!isEditing){
+      mylcd.setPosition(2,10);
+      mylcd.boxCursorOn(); 
+    }
+    else{
+      mylcd.setPosition(2,11);
+      mylcd.underlineCursorOn(); 
+    }
+  break;
+    
   case S_TSMAX:
-    if(!isEditing){
-      mylcd.setPosition(4,4);
-      mylcd.boxCursorOn(); 
-    }
-    else{
-      mylcd.setPosition(4,7);
-      mylcd.underlineCursorOn(); 
-    }
-    break;
-
-  case S_PCICLE:
     if(!isEditing){
       mylcd.setPosition(3,4);
       mylcd.boxCursorOn(); 
     }
     else{
-      mylcd.setPosition(3,9);
+      mylcd.setPosition(3,7);
       mylcd.underlineCursorOn(); 
     }
     break;
-  case S_PINTERVAL:
-    if(!isEditing){
-      mylcd.setPosition(3,15);
-      mylcd.boxCursorOn(); 
-    }
-    else{
-      mylcd.setPosition(3,19);
-      mylcd.underlineCursorOn(); 
-    }
-    break;
-    case S_PCICLESECONDS:
+
   
-    if(!isEditing){
-      mylcd.setPosition(3,10);
-      mylcd.boxCursorOn(); 
-    }
-    else{
-      mylcd.setPosition(3,11);
-      mylcd.underlineCursorOn(); 
-    }
-  break;
+  
   }
   
 }
-
