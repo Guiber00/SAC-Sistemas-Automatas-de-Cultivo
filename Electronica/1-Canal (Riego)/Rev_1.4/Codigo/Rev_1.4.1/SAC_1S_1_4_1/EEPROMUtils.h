@@ -43,7 +43,6 @@ typedef struct{
   int check_interval; //Interval Check for update the Sensors
   int flow_diameter;//Flow Diameter for Flow Size Sensor
   int active_languaje;//Active Languaje
-  int calib_FC;//Field capacity calibration.
   int interval_time;//IntervalTime
   int TICicle;
   
@@ -63,10 +62,9 @@ Configuration getDefaultConfig(){
   default_config.TICicle=6;
   default_config.PICicle=50;
   default_config.check_interval=15;
-  default_config.SM_calib=0.0;
   default_config.flow_diameter=16;
   default_config.active_languaje=0;
-  default_config.calib_FC=0;
+  default_config.SM_calib=500;
 
   return default_config;
 }
