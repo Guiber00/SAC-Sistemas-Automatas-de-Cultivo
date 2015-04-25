@@ -1,10 +1,3 @@
-#include <DS1307RTC.h>
-#include <Wire.h>
-#include <Time.h>
-#include <stdlib.h>
-
-double getMinutesBetween(tmElements_t time1,tmElements_t time2);
-
 /*
  * RTCUtils.h
  *
@@ -37,8 +30,12 @@ double getMinutesBetween(tmElements_t time1,tmElements_t time2);
  * Current Version: 0.2
  */
  
+#include <DS1307RTC.h>
+#include <Wire.h>
+#include <Time.h>
+#include <stdlib.h>
 
- 
+double getMinutesBetween(tmElements_t time1,tmElements_t time2);
 int RTCread(tmElements_t & tm);
 char * getTimeAndHour(tmElements_t tm);
 String parseDigit(int n);
@@ -51,6 +48,7 @@ tmElements_t parseTimeAndHour(char * td);
 * tm: the tmElements with the Time and Date information
 * returns true if success or false otherwise.
 */
+
 int RTCread(tmElements_t & tm){
 	
 	if(!RTC.read(tm)){
@@ -77,6 +75,7 @@ char * getTimeAndHour(tmElements_t tm)
   sprintf(buffer,timedate,tm.Hour,tm.Minute,tm.Day,tm.Month,tmYearToCalendar(tm.Year));
   return buffer;
 }
+
 /*
 * Parse a digit for Show as time or date.
 * (if the number is between 0 and 9 a '0' is add at the begin).
@@ -84,6 +83,7 @@ char * getTimeAndHour(tmElements_t tm)
 * n: number to parse.
 * returns: the String as a digit.
 */
+
 String parseDigit(int n)
 {
    String str="";
