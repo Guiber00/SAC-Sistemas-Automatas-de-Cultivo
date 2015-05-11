@@ -19,37 +19,36 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  * Vesion History:
- * 0.1. Initial Version 
- * 
+ * 0.1. Initial Version
+ *
  * Current Version: 0.1
  */
- 
+
 #include "Arduino.h"
 #define MAX_RELAYS 1
 #define RELAY1_PIN 2
 
-  enum RelayState {
-    RELAY_OFF=0,
+enum RelayState
+{
+    RELAY_OFF = 0,
     RELAY_ON,
     RELAY_WAIT
- };
+};
 
 typedef struct _Relay Relay;
 
-  struct _Relay {
-  byte gpio_pin;
-  byte state;
- };
- 
+struct _Relay
+{
+	byte gpio_pin;
+	byte state;
+};
 
 void relay_on (byte relayPin)
 {
-      digitalWrite(relayPin, HIGH);
+	digitalWrite(relayPin, HIGH);
 }
 
 void relay_off (byte relayPin)
 {
-  
-  digitalWrite(relayPin, LOW);
-
+	digitalWrite(relayPin, LOW);
 }
