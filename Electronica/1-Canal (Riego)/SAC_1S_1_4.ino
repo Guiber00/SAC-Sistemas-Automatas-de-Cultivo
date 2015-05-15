@@ -1,11 +1,37 @@
-/***************************************************************************************************************
-  SAC: This is the main file of S.A.C. Project (Smart Irrigation System) [one channel output]:
+/*
+  SAC: This is the Main File of SAC Project:
   http://sacultivo.com
 
-  *** Funcionaliy:
-  
-  
-  *** Parameters Name:
+  In this file we can see all the functions for the correct functionality of the SAC Unit for 1 Output Channel
+
+  Author: Victor Suarez Garcia<suarez.garcia.victor@gmail.com>
+  Co-Author: David Cuevas Lopez<mr.cavern@gmail.com>
+
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+  Version History:
+
+  0.9 First prototype of the SAC System and first code aproach by Victor Amo.
+  1.0 Second prototype with first sensors and LCD, coded by Andres Orencio.
+  1.1. Initial Version. Written by Øyvind Kolås pippin@gimp.org in 2013.
+  1.2. Some Changes for more readablity. written by victor suarez suarez.garcia.victor@gmail.com and David Cuevas mr.cavern@gmail.com in March 2014.
+  1.3. Improved all the Functionality for 20x4 Screen and improved for 1.3 PCB Version. written by victor suarez suarez.garcia.victor@gmail.com and David Cuevas mr.cavern@gmail.com in April 2014
+  1.4. Optimized, debugging, cleaning, and improving the code from the previous version (1.3), to develope the agronomical funtionalities implemented to PCB 1.4.1 by Adrian Navarro in Mayo 2015
+
+
+  ---PARAMETERS NAME---
 
   SM=Soil Moisture
   SMOp=Soil Moisture Optimun
@@ -16,32 +42,8 @@
   STmin=Soil Temperature minimun
   TICicle=Total Irrigation Cicle (seconds)
   PICicle=Percentaje Irrigation Cicle (%)
-  
-  *** Version History:
 
-  0.9) First prototype of the SAC System and first code aproach, by Victor Amo (@) in (-> Github).
-  1.0) Second prototype with first sensors and LCD, coded by Andres Orencio (andy@orencio.org) in  (-> Github).
-  1.1) First 3 channel version multirole prototype. Code written, by Øyvind Kolås (pippin@gimp.org) in June 2013  (-> Github).
-  1.2 & 1.3) Some Changes for more readablity, improved all the functionality for 20x4 screen (PCB 1.3), by Victor Suarez (suarez.garcia.victor@gmail.com) and David Cuevas (mr.cavern@gmail.com) in March 2014.
-  1.4) Optimized, debugged, cleaned, and improved the code from the previous version (1.3), to run the agronomical funtionalities implemented in PCB 1.4.1, by Adrian Navarro in May 2015
-
-  *** License:
-
-  This code is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This code is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-
-***************************************************************************************************************/
+*/
 
 #include <SoftwareSerial.h>
 #include <SerLCD.h>
@@ -244,16 +246,11 @@ void setup_pins()
 }
 
 
-// Relay PIN and LEDPump CONFIGURATION
+// Relay PIN CONFIGURATION
 
 void relay_on ()
 {
 	digitalWrite(RELAY_PIN, HIGH);
-        /* Flasing the LED Pump (Watering)*/
- 	digitalWrite(LEDPump_PIN, HIGH);
-	delay(500);
-	digitalWrite(LEDPump_PIN, LOW);
-	delay(500);
 }
 
 void relay_off ()
@@ -261,7 +258,19 @@ void relay_off ()
 	digitalWrite(RELAY_PIN, LOW);
 }
 
-void relay_waiting () // Flasing the LED Pump
+// Pumping LED CONFIGURATION Flasing the LED Pump (Watering)
+        
+void LEDpumping ()
+{        
+ 	digitalWrite(LEDPump_PIN, HIGH);
+	delay(500);
+	digitalWrite(LEDPump_PIN, LOW);
+	delay(500);
+}
+
+// Pump Waiting LED CONFIGURATION
+
+void LEDpump_waiting () // Flasing the LED Pump
 {
 	digitalWrite(LEDPump_PIN, HIGH);
 	delay(200);
@@ -271,15 +280,18 @@ void relay_waiting () // Flasing the LED Pump
 
 // No Water LED CONFIGURATION
 
-void No_Water ()
+void LEDNo_Water ()
 {
 	digitalWrite(LEDNoWater_PIN, HIGH);
 }
 
-void FieldC_Reached ()
+// Field Capacity LED CONFIGURATION
+
+void LEDFieldC_Reached ()
 {
 	digitalWrite(LEDFieldC_PIN, HIGH);
 }
+
 
 // ALWAYS UPDATE SCREEN WHEN STATE CHANGES
 
