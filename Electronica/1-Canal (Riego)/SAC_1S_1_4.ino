@@ -241,23 +241,25 @@ void setup_pins()
 	pinMode(LEDPump_PIN, OUTPUT);
 	pinMode(LEDNoWater_PIN, OUTPUT);
 	pinMode(LEDFieldC_PIN, OUTPUT);
-
-	isEditing = false;
 }
 
 
-// Relay PIN BEHAVIOR CONFIGURATION
+// Relay PIN and LEDPump CONFIGURATION
 
 void relay_on ()
 {
 	digitalWrite(RELAY_PIN, HIGH);
+        /* Flasing the LED Pump (Watering)*/
+ 	digitalWrite(LEDPump_PIN, HIGH);
+	delay(500);
+	digitalWrite(LEDPump_PIN, LOW);
+	delay(500);
 }
 
 void relay_off ()
 {
 	digitalWrite(RELAY_PIN, LOW);
 }
-
 
 void relay_waiting () // Flasing the LED Pump
 {
@@ -267,6 +269,17 @@ void relay_waiting () // Flasing the LED Pump
 	delay(800);
 }
 
+// No Water LED CONFIGURATION
+
+void No_Water ()
+{
+	digitalWrite(LEDNoWater_PIN, HIGH);
+}
+
+void FieldC_Reached ()
+{
+	digitalWrite(LEDFieldC_PIN, HIGH);
+}
 
 // ALWAYS UPDATE SCREEN WHEN STATE CHANGES
 
