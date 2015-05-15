@@ -22,7 +22,7 @@
   0.9) First prototype of the SAC System and first code aproach, by Victor Amo (@) in (-> Github).
   1.0) Second prototype with first sensors and LCD, coded by Andres Orencio (andy@orencio.org) in  (-> Github).
   1.1) First 3 channel version multirole prototype. Code written, by Øyvind Kolås (pippin@gimp.org) in June 2013  (-> Github).
-  1.2) & 1.3 Some Changes for more readablity, improved all the functionality for 20x4 screen (PCB 1.3), by Victor Suarez (suarez.garcia.victor@gmail.com) and David Cuevas (mr.cavern@gmail.com) in March 2014.
+  1.2 & 1.3) Some Changes for more readablity, improved all the functionality for 20x4 screen (PCB 1.3), by Victor Suarez (suarez.garcia.victor@gmail.com) and David Cuevas (mr.cavern@gmail.com) in March 2014.
   1.4) Optimized, debugged, cleaned, and improved the code from the previous version (1.3), to run the agronomical funtionalities implemented in PCB 1.4.1, by Adrian Navarro in May 2015
 
   *** License:
