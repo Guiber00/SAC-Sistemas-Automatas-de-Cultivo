@@ -1,8 +1,8 @@
 /*******************************************************************************************************   
 
-  S.A.C. Project (Smart Irrigation System) started originally by Adrian Navarro:
+  S.A.C. Project (Automatic Cropping Systems) started originally by Adrian Navarro:
 
-  This is the main file of the sotfware to run the funtionalities of the sysmtem, embebed into and Arduino Pro Mini.
+  This is the main file of the sotfware to run the funtionalities of the system (Smart Irrigation System), embebed into and Arduino Pro Mini.
   
   *** Funcionaliy:
   
@@ -250,9 +250,9 @@ void relay_off ()
 void LEDpumping ()
 {        
  	digitalWrite(LEDPump_PIN, HIGH);
-	delay(500);                         //Habra que corregir esta funciom y sustituir el delay por tiempo
+	delay(400);                         //Habra que corregir esta funciom y sustituir el delay por tiempo
 	digitalWrite(LEDPump_PIN, LOW);
-	delay(500);                         //Habra que corregir esta funciom y sustituir el delay por tiempo
+	delay(400);                         //Habra que corregir esta funciom y sustituir el delay por tiempo
 }
 
 // Pump Waiting LED CONFIGURATION
@@ -260,9 +260,9 @@ void LEDpumping ()
 void LEDpump_waiting () // Flasing the LED Pump
 {
 	digitalWrite(LEDPump_PIN, HIGH);
-	delay(200);                         //Habra que corregir esta funciom y sustituir el delay por tiempo
+	delay(150);                         //Habra que corregir esta funciom y sustituir el delay por tiempo
 	digitalWrite(LEDPump_PIN, LOW);
-	delay(800);                         //Habra que corregir esta funciom y sustituir el delay por tiempo
+	delay(850);                         //Habra que corregir esta funciom y sustituir el delay por tiempo
 }
 
 // No Water LED CONFIGURATION
