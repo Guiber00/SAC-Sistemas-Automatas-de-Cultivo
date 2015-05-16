@@ -2,7 +2,7 @@
 
   S.A.C. Project (Automatic Cropping Systems) started originally by Adrian Navarro:
 
-  This is the main file of the sotfware to run the funtionalities of the system (Smart Irrigation System), embebed into and Arduino Pro Mini.
+  This is the main file of the sotfware to run the funtionalities of the system (Smart Irrigation System), embebed into and Arduino Pro Mini board.
   
   *** Funcionaliy:
   
