@@ -1,30 +1,33 @@
-/*
- 
-  SAC: This is the main file of S.A.C. Project (Smart Irrigation System) [one channel output]:
+/*******************************************************************************************************   
 
+  S.A.C. Project (Smart Irrigation System) started originally by Adrian Navarro:
+
+  This is the main file of the sotfware to run the funtionalities of the sysmtem, embebed into and Arduino Pro Mini.
   
   *** Funcionaliy:
--  
--  
--  *** Parameters Name:
--
--  SM=Soil Moisture
--  SMOp=Soil Moisture Optimun
--  SMmin=Soil Moisture minimun
--  SMcalib=Soil Moisture Reading for calibrating the sensor
--  FC=Field Capacity
--  STMax=Soil Temperature Maximun
--  STmin=Soil Temperature minimun
--  TICicle=Total Irrigation Cicle (seconds)
--  PICicle=Percentaje Irrigation Cicle (%)
--  
--  *** Version History:
--
--  0.9) First prototype of the SAC System and first code aproach, by Victor Amo (@) in (-> Github).
--  1.0) Second prototype with first sensors and LCD, coded by Andres Orencio (andy@orencio.org) in  (-> Github).
--  1.1) First 3 channel version multirole prototype. Code written, by Øyvind Kolås (pippin@gimp.org) in June 2013  (-> Github).
--  1.2 & 1.3) Some Changes for more readablity, improved all the functionality for 20x4 screen (PCB 1.3), by Victor Suarez (suarez.garcia.victor@gmail.com) and David Cuevas (mr.cavern@gmail.com) in March 2014.
--  1.4) Optimized, debugged, cleaned, and improved the code from the previous version (1.3), to run the agronomical funtionalities implemented in PCB 1.4.1, by Adrian Navarro in May 2015
+  
+  
+  *** Parameters Name:
+
+  SM=Soil Moisture
+  SMOp=Soil Moisture Optimun
+  SMmin=Soil Moisture minimun
+  SMcalib=Soil Moisture Reading for calibrating the sensor
+  FC=Field Capacity
+  STMax=Soil Temperature Maximun
+  STmin=Soil Temperature minimun
+  TICicle=Total Irrigation Cicle (seconds)
+  PICicle=Percentaje Irrigation Cicle (%)
+  
+  *** Version History:
+
+  0.9) First prototype of the SAC System and first code aproach, by Victor Amo (@) in (-> Github).
+  1.0) Second prototype with first sensors and LCD, coded by Andres Orencio (andy@orencio.org) in  (-> Github).
+  1.1) First 3 channel version multirole prototype. Code written, by Øyvind Kolås (pippin@gimp.org) in June 2013  (-> Github).
+  1.2 & 1.3) Some Changes for more readablity, improved all the functionality for 20x4 screen (PCB 1.3), by Victor Suarez (suarez.garcia.victor@gmail.com) and David Cuevas (mr.cavern@gmail.com) in March 2014.
+  1.4) Optimized, debugged, cleaned, and improved the code from the previous version (1.3), to run the agronomical funtionalities implemented in PCB 1.4.1, by Adrian Navarro in May 2015
+
+  [All PCBs designed by Adrian Navarro]
 
   *** License:
   
@@ -42,7 +45,7 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-*/
+*******************************************************************************************************/
 
 #include <SoftwareSerial.h>
 #include <SerLCD.h>
@@ -91,11 +94,10 @@ enum RelayState
 #define BUTTONDOWN 1
 #define BUTTONCENTER 2
 #define BUTTONCENTERLONG 3
+
 #define TIMEOUT 10
-
-#define IDLE -1
-
 #define TOTALTIMEOUT 20000
+#define IDLE -1
 
 // VERSIONS OF SOFTWARE AND HARDWARE
 
@@ -144,22 +146,10 @@ typedef struct MenuItem
 
 MenuItem main_menu[] =
 {
-	{
-		S_SATCALIBRATION, CALIBRACION_SAT
-	}
-	,
-	{
-		S_RESET, RESET_CONFIG
-	}
-	,
-	{
-		S_ABOUT, ABOUT
-	}
-	,
-	{
-		S_RETURN_TO, END_SELECTION
-	}
-
+	{S_SATCALIBRATION, CALIBRACION_SAT},
+	{S_RESET, RESET_CONFIG},
+	{S_ABOUT, ABOUT},
+	{S_RETURN_TO, END_SELECTION}
 };
 
 int current_menu;
@@ -195,8 +185,7 @@ long lastEvent;
 
 boolean cerrojo_center = 1;
 
-void setup_pins();
-void static DrawSELECT(State & state);
+// General Setup
 
 void setup()
 {
@@ -229,7 +218,7 @@ void initializeGlobalVars()
 	time1 = millis();
 }
 
-//setup SAC Pins.
+//Setup PINs.
 
 void setup_pins()
 {
@@ -256,14 +245,14 @@ void relay_off ()
 	digitalWrite(RELAY_PIN, LOW);
 }
 
-// Pumping LED CONFIGURATION Flasing the LED Pump (Watering)
+// Pumping LED CONFIGURATION Flasing the LED Pump (Watering) 
         
 void LEDpumping ()
 {        
  	digitalWrite(LEDPump_PIN, HIGH);
-	delay(500);
+	delay(500);                         //Habra que corregir esta funciom y sustituir el delay por tiempo
 	digitalWrite(LEDPump_PIN, LOW);
-	delay(500);
+	delay(500);                         //Habra que corregir esta funciom y sustituir el delay por tiempo
 }
 
 // Pump Waiting LED CONFIGURATION
@@ -271,9 +260,9 @@ void LEDpumping ()
 void LEDpump_waiting () // Flasing the LED Pump
 {
 	digitalWrite(LEDPump_PIN, HIGH);
-	delay(200);
+	delay(200);                         //Habra que corregir esta funciom y sustituir el delay por tiempo
 	digitalWrite(LEDPump_PIN, LOW);
-	delay(800);
+	delay(800);                         //Habra que corregir esta funciom y sustituir el delay por tiempo
 }
 
 // No Water LED CONFIGURATION
@@ -389,9 +378,6 @@ int button_down_pressed()
 	}
 
 	if(current_state == LOW)
-	{
-	}
-
 	return IDLE;
 }
 
@@ -461,18 +447,13 @@ void handleEvent(int event)
 			break;
 
 		case SELECT:
-			SelectionStatus(event);
+			EventSELECT(event);
 			break;
 
 		case CONFIG_MENU:
-			EditionStatus(event);
+			EventCONFIG_MENU(event);
 			break;
 	}
-}
-
-void SelectionStatus(int event)
-{
-	EventSELECT(event);
 }
 
 void EventSELECT(int event)
@@ -512,7 +493,7 @@ void EventSELECT(int event)
 			mylcd.clear();
 			mylcd.boxCursorOff();
 
-// Store current state settings
+                        // Store current state settings
 
 			current_config.SMOp = current_sensorsvalues.cached_SMOp;
 			current_config.SMmin = current_sensorsvalues.cached_SMmin;
@@ -523,7 +504,6 @@ void EventSELECT(int event)
 			current_config.TICicle = current_sensorsvalues.cached_TICicle;
 			store_Settings(current_config);
 		}
-
 	}
 	else
 	{
@@ -558,10 +538,8 @@ void EventSELECT(int event)
 					refresh_LCD = true;
 					mylcd.clear();
 					mylcd.boxCursorOff();
-
 				}
 				break;
-
 
 			case S_SMmin:
 
@@ -592,10 +570,8 @@ void EventSELECT(int event)
 					refresh_LCD = true;
 					mylcd.clear();
 					mylcd.boxCursorOff();
-
 				}
 				break;
-
 
 			case S_TICicle:
 
@@ -617,7 +593,6 @@ void EventSELECT(int event)
 						current_sensorsvalues.cached_TICicle = 1;
 					}
 					refresh_LCD = true;
-
 				}
 
 				if(event == TIMEOUT)
@@ -627,7 +602,6 @@ void EventSELECT(int event)
 					refresh_LCD = true;
 					mylcd.clear();
 					mylcd.boxCursorOff();
-
 				}
 				break;
 
@@ -660,7 +634,6 @@ void EventSELECT(int event)
 					refresh_LCD = true;
 					mylcd.clear();
 					mylcd.boxCursorOff();
-
 				}
 				break;
 
@@ -742,7 +715,7 @@ void EventSELECT(int event)
  * EVENT HANDLER FOR EACH SELECTION STATE
  * END SELECTION: EXITS SELECTION STATE
  */
-void EditionStatus(int event)
+void EventCONFIG_MENU(int event)
 {
 	switch(current_screen)
 	{
@@ -841,14 +814,9 @@ void DrawUI(State & state)
 	}
 }
 
-void DrawHOME(State & state)
-{
-	DrawSreen_State(state);
-}
-
 // Draws HOME SCREEN
 
-void DrawSreen_State(State & state)
+void DrawHOME(State & state)
 {
 
 // Line 1
@@ -944,7 +912,7 @@ void DrawSreen_State(State & state)
 void static DrawSELECT(State & state)
 {
 
-//Line 1
+// Line 1
 
 	mylcd.setPosition(1, 0);
 	mylcd.print(translate(S_SM));
@@ -957,7 +925,7 @@ void static DrawSELECT(State & state)
 		mylcd.print("0");
 	mylcd.print((int)state.SMmin);
 
-//Line 2
+// Line 2
 
 	mylcd.setPosition(2, 0);
 	mylcd.print(translate(S_CICLE));
@@ -977,7 +945,7 @@ void static DrawSELECT(State & state)
 	mylcd.print(current_sensorsvalues.cached_PICicle);
 	mylcd.print("%");
 
-//Line 3
+// Line 3
 
 	mylcd.setPosition(3, 0);
 	mylcd.print(translate(S_STMAX));
@@ -1068,7 +1036,6 @@ void static DrawSELECT(State & state)
 			}
 			break;
 
-
 		case S_STmin:
 
 			if(!isEditing)
@@ -1103,7 +1070,6 @@ void DrawCONFIG_MENU()
 			DrawAbout();
 			break;
 	}
-
 }
 
 // DRAWS CONFIGURATION RULES
@@ -1177,4 +1143,3 @@ void update_relay_state (void)
 }
 
 //IRRIGATION CICLES ********************** HAY QUE IMPLEMENTARLOS
-
